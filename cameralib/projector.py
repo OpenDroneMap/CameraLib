@@ -1,7 +1,7 @@
 import os
 
 class Projector:
-    def __init__(self, project_path):
+    def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median'):
         if not os.path.isdir(project_path):
             raise IOError(f"{project_path} is not a valid path to an ODM project")
         
@@ -9,6 +9,9 @@ class Projector:
 
         self.dsm_path = os.path.abspath(os.path.join(project_path, "odm_dem", "dsm.tif"))
         self.dtm_path = os.path.abspath(os.path.join(project_path, "odm_dem", "dtm.tif"))
+
+        self.z_sample_window = z_sample_window
+        self.z_sample_strategy = z_sample_strategy
 
         #self.camera_mappings =
         
