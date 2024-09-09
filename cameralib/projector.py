@@ -1,7 +1,7 @@
 import os
 import json
 from cameralib.geo import get_utm_xyz 
-from cameralib.camera import load_shots, load_camera_mappings
+from cameralib.camera import load_shots, load_camera_mappings, load_cameras
 from cameralib.exceptions import *
 
 class Projector:
@@ -24,8 +24,10 @@ class Projector:
 
         self.shots_path = os.path.abspath(os.path.join(project_path, "odm_report", "shots.geojson"))
         self.mappings_file = os.path.abspath(os.path.join(project_path, "odm_report", "camera_mappings.npz"))
+        self.cameras_path = os.path.abspath(os.path.join(project_path, "cameras.json"))
 
         self.shots = load_shots(self.shots_path)
+        self.cameras = load_cameras(self.cameras_path)
         self.camera_mappings = load_camera_mappings(self.mappings_file)
 
 
@@ -111,6 +113,9 @@ class Projector:
 
                     xu = (map_x[yi,xi] + offset[0]) / mul + xi
                     yu = (map_y[yi,xi] + offset[1]) / mul + yi
+
+                    print(cam_id, s['filename'], xi, yi, xu, yu, s['width'], s['height'])
+                    exit(1)
                     valid = xu >= 0 and xu <= img_w and yu >= 0 and yu <= img_h
 
                     result['x'] = float(xu)

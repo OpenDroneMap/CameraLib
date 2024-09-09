@@ -41,6 +41,9 @@ def load_shots(shots_path):
     
     return result
 
+def load_cameras(cameras_file):
+    with open(cameras_file) as f:
+        return json.load(f)
 
 def load_camera_mappings(mappings_file):
     with np.load(mappings_file, allow_pickle=False) as data:
