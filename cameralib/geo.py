@@ -40,13 +40,13 @@ def sample_z(rast_ds, x, y, window=1, strategy='median'):
     return z
 
 
-def get_utm_xyz(raster_path, latlng, z_sample_window=1, z_sample_strategy='median'):
+def get_utm_xyz(raster_path, latitude, longitude, z_sample_window=1, z_sample_strategy='median'):
     with rasterio.open(raster_path) as d:
         if d.crs is None:
             raise GeoError(f"{raster_path} does not have a CRS")
             
         src_crs = CRS({'init':'EPSG:4326'})
-        x, y = transform(src_crs, d.crs, [latlng[1]], [latlng[0]])
+        x, y = transform(src_crs, d.crs, [longitude], [latitude])
         x = x[0]
         y = y[0]
 
