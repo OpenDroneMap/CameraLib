@@ -1,6 +1,7 @@
 import os
 import json
 import numpy as np
+import rasterio
 from cameralib.geo import get_utm_xyz 
 from cameralib.camera import load_shots, load_cameras, map_pixels
 from cameralib.exceptions import *
@@ -31,7 +32,59 @@ class Projector:
 
 
     def cam2world(self, image, coordinates):
-        pass
+        """Project 2D pixel coordinates in camera space to geographic coordinates
+        
+        Args:
+            image (str): image filename
+            coordinates (list of tuples): x,y pixel coordinates
+
+        Returns:
+            list of tuples: longitude,latitude,elevation for each coordinate pair
+        """
+        if not image in self.shots_map:
+            raise InvalidArgError(f"Image {image} not found in {self.shots_path}")
+
+        s = self.shots[self.shots_map[image]]
+        cam_id = s['cam_id'].replace("v2 ", "")
+        cam = self.cameras[cam_id]
+
+        undistorted_uv = map_pixels(cam, cam.undistorted(), np.array(coordinates, dtype=np.float64))
+        
+        with rasterio.open(self.dem_path, 'r') as raster:
+            min_z = 100 # TODO
+
+            r = s['rotation']
+            a1 = r[0][0]
+            b1 = r[0][1]
+            c1 = r[0][2]
+            a2 = r[1][0]
+            b2 = r[1][1]
+            c2 = r[1][2]
+            a3 = r[2][0]
+            b3 = r[2][1]
+            c3 = r[2][2]
+
+            focal = s['focal']
+            img_w = s['width']
+            img_h = s['height']
+            f = focal * max(img_h, img_w)
+            Xs, Ys, Zs = s['translation']
+            cam_grid_y, cam_grid_x = raster.index(Xs, Ys)
+
+            print(cam_grid_x, cam_grid_y)
+
+            # Get the grid coordinates of the ray projected from the camera via (u,v)
+            # The Xa,Ya equations are just derived from the colinearity equations
+            # solving for Xa and Ya instead of x,y
+            Za = min_z
+            u,v = undistorted_uv[0][0] - img_w / 2.0, undistorted_uv[0][1] - img_h / 2.0
+            m = (a3*b1*v - a1*b3*v - (a3*b2 - a2*b3)*u - (a2*b1 - a1*b2)*f)
+            Xa = (m*Xs + (b3*c1*v - b1*c3*v - (b3*c2 - b2*c3)*u - (b2*c1 - b1*c2)*f)*Za - (b3*c1*v - b1*c3*v - (b3*c2 - b2*c3)*u - (b2*c1 - b1*c2)*f)*Zs)/m
+            Ya = (m*Ys - (a3*c1*v - a1*c3*v - (a3*c2 - a2*c3)*u - (a2*c1 - a1*c2)*f)*Za + (a3*c1*v - a1*c3*v - (a3*c2 - a2*c3)*u - (a2*c1 - a1*c2)*f)*Zs)/m
+
+            y, x = raster.index(Xa, Ya)
+            print(x, y)
+            exit(1)
 
     # p.cam2world("image.JPG", [(x, y), ...]) --> ((x, y, z), ...) (geographic coordinates)
 
