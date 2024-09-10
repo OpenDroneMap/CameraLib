@@ -139,21 +139,4 @@ def load_cameras(cameras_file):
         result[cam_id] = cam
     return result
 
-def load_camera_mappings(mappings_file):
-    with np.load(mappings_file, allow_pickle=False) as data:
-        if not 'ids' in data:
-            raise IOError("Invalid camera mappings file (ids missing)")
-        
-        result = {}
-        idx = 0
-        for cam_id in data['ids']:
-            result[cam_id] = {
-                'x': data['%s_x' % idx],
-                'y': data['%s_y' % idx],
-                'offset': data['%s_offset' % idx],
-                'mul': data['%s_mul' % idx][0]
-            }
-            idx += 1
-
-        return result
 

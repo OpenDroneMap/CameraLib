@@ -1,7 +1,8 @@
 import os
 import json
+import numpy as np
 from cameralib.geo import get_utm_xyz 
-from cameralib.camera import load_shots, load_camera_mappings, load_cameras
+from cameralib.camera import load_shots, load_cameras, map_pixels
 from cameralib.exceptions import *
 
 class Projector:
@@ -23,12 +24,10 @@ class Projector:
             raise InvalidArgError(f"Invalid z_sample_target {z_sample_target}")
 
         self.shots_path = os.path.abspath(os.path.join(project_path, "odm_report", "shots.geojson"))
-        self.mappings_file = os.path.abspath(os.path.join(project_path, "odm_report", "camera_mappings.npz"))
         self.cameras_path = os.path.abspath(os.path.join(project_path, "cameras.json"))
 
         self.shots, self.shots_map = load_shots(self.shots_path)
         self.cameras = load_cameras(self.cameras_path)
-        self.camera_mappings = load_camera_mappings(self.mappings_file)
 
 
     def cam2world(self, image, coordinates):
@@ -76,7 +75,7 @@ class Projector:
             b3 = r[2][1]
             c3 = r[2][2]
 
-            cam_id = s['cam_id']
+            cam_id = s['cam_id'].replace("v2 ", "")
             focal = s['focal']
             img_w = s['width']
             img_h = s['height']
@@ -99,23 +98,15 @@ class Projector:
                 result = {
                     'filename': s['filename']
                 }
+                if cam_id is not None and cam_id in self.cameras:
+                    cam = self.cameras[cam_id]
 
-                if self.camera_mappings is not None and cam_id is not None and cam_id in self.camera_mappings:
                     # Back-undistort to find exact UV coordinates
 
                     xi = img_w - 1 - int(round(x))
                     yi = img_h - 1 - int(round(y))
+                    xu, yu = map_pixels(cam.undistorted(), cam, np.array([[xi, yi]])).ravel()
 
-                    map_x = self.camera_mappings[cam_id]['x']
-                    map_y = self.camera_mappings[cam_id]['y']
-                    offset = self.camera_mappings[cam_id]['offset']
-                    mul = self.camera_mappings[cam_id]['mul']
-
-                    xu = (map_x[yi,xi] + offset[0]) / mul + xi
-                    yu = (map_y[yi,xi] + offset[1]) / mul + yi
-
-                    print(cam_id, s['filename'], xi, yi, xu, yu, s['width'], s['height'])
-                    exit(1)
                     valid = xu >= 0 and xu <= img_w and yu >= 0 and yu <= img_h
 
                     result['x'] = float(xu)
