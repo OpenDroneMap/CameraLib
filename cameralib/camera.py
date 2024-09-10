@@ -113,7 +113,7 @@ def load_shots(shots_path):
             'height': height
         })
         shots_map[filename] = idx
-        idx+=1
+        idx += 1
     
     return result, shots_map
 
