@@ -20,9 +20,3 @@ def rodrigues_vec_to_rotation_mat(rodrigues_vec):
         rotation_mat = math.cos(theta) * ident + (1 - math.cos(theta)) * r_rT + math.sin(theta) * r_cross
 
     return rotation_mat
-
-def get_K_in_pixel_coordinates(focal, width, height):
-    f = focal * max(width, height)
-    return np.array([[f, 0, 0.5 * (width - 1)],
-                        [0, f, 0.5 * (height - 1)],
-                        [0, 0, 1.0]])

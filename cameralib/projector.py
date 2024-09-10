@@ -26,7 +26,7 @@ class Projector:
         self.mappings_file = os.path.abspath(os.path.join(project_path, "odm_report", "camera_mappings.npz"))
         self.cameras_path = os.path.abspath(os.path.join(project_path, "cameras.json"))
 
-        self.shots = load_shots(self.shots_path)
+        self.shots, self.shots_map = load_shots(self.shots_path)
         self.cameras = load_cameras(self.cameras_path)
         self.camera_mappings = load_camera_mappings(self.mappings_file)
 
