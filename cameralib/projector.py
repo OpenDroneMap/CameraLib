@@ -2,6 +2,7 @@ import os
 import json
 import numpy as np
 import rasterio
+from skimage.draw import line
 from cameralib.geo import get_utm_xyz 
 from cameralib.camera import load_shots, load_cameras, map_pixels
 from cameralib.exceptions import *
@@ -30,6 +31,20 @@ class Projector:
         self.shots, self.shots_map = load_shots(self.shots_path)
         self.cameras = load_cameras(self.cameras_path)
 
+        self.raster = None
+        self.dem_data = None
+        self.min_z = None
+    
+    def _read_dem(self):
+        if self.raster is None:
+            self.raster = rasterio.open(self.dem_path, 'r')
+            self.dem_data = self.raster.read(1, masked=True)
+            self.min_z = self.dem_data.min()
+
+    def __del__(self):
+        if self.raster is not None:
+            self.raster.close()
+            self.raster = None
 
     def cam2world(self, image, coordinates):
         """Project 2D pixel coordinates in camera space to geographic coordinates
@@ -49,43 +64,64 @@ class Projector:
         cam = self.cameras[cam_id]
 
         undistorted_uv = map_pixels(cam, cam.undistorted(), np.array(coordinates, dtype=np.float64))
+        self._read_dem()
+
+        r = s['rotation']
+        a1 = r[0][0]
+        b1 = r[0][1]
+        c1 = r[0][2]
+        a2 = r[1][0]
+        b2 = r[1][1]
+        c2 = r[1][2]
+        a3 = r[2][0]
+        b3 = r[2][1]
+        c3 = r[2][2]
+
+        focal = s['focal']
+        img_w = s['width']
+        img_h = s['height']
+        f = focal * max(img_h, img_w)
+        Xs, Ys, Zs = s['translation']
+        cam_grid_y, cam_grid_x = self.raster.index(Xs, Ys)
+
+        # Get the grid coordinates of the ray projected from the camera via (u,v)
+        # The Xa,Ya equations are just derived from the colinearity equations
+        # solving for Xa and Ya instead of x,y
+        Za = self.min_z
+        u,v = undistorted_uv[0][0] - img_w / 2.0, undistorted_uv[0][1] - img_h / 2.0
+        m = (a3*b1*v - a1*b3*v - (a3*b2 - a2*b3)*u - (a2*b1 - a1*b2)*f)
+        Xa = (m*Xs + (b3*c1*v - b1*c3*v - (b3*c2 - b2*c3)*u - (b2*c1 - b1*c2)*f)*Za - (b3*c1*v - b1*c3*v - (b3*c2 - b2*c3)*u - (b2*c1 - b1*c2)*f)*Zs)/m
+        Ya = (m*Ys - (a3*c1*v - a1*c3*v - (a3*c2 - a2*c3)*u - (a2*c1 - a1*c2)*f)*Za + (a3*c1*v - a1*c3*v - (a3*c2 - a2*c3)*u - (a2*c1 - a1*c2)*f)*Zs)/m
+
+        y, x = self.raster.index(Xa, Ya)
+        ray_pts = np.column_stack(line(cam_grid_x, cam_grid_y, x, y))
+
+        if Za > Zs:
+            raise CannotProjectError(f"Camera is below the surface ({Zs}m)")
         
-        with rasterio.open(self.dem_path, 'r') as raster:
-            min_z = 100 # TODO
-
-            r = s['rotation']
-            a1 = r[0][0]
-            b1 = r[0][1]
-            c1 = r[0][2]
-            a2 = r[1][0]
-            b2 = r[1][1]
-            c2 = r[1][2]
-            a3 = r[2][0]
-            b3 = r[2][1]
-            c3 = r[2][2]
-
-            focal = s['focal']
-            img_w = s['width']
-            img_h = s['height']
-            f = focal * max(img_h, img_w)
-            Xs, Ys, Zs = s['translation']
-            cam_grid_y, cam_grid_x = raster.index(Xs, Ys)
-
-            print(cam_grid_x, cam_grid_y)
-
-            # Get the grid coordinates of the ray projected from the camera via (u,v)
-            # The Xa,Ya equations are just derived from the colinearity equations
-            # solving for Xa and Ya instead of x,y
-            Za = min_z
-            u,v = undistorted_uv[0][0] - img_w / 2.0, undistorted_uv[0][1] - img_h / 2.0
-            m = (a3*b1*v - a1*b3*v - (a3*b2 - a2*b3)*u - (a2*b1 - a1*b2)*f)
-            Xa = (m*Xs + (b3*c1*v - b1*c3*v - (b3*c2 - b2*c3)*u - (b2*c1 - b1*c2)*f)*Za - (b3*c1*v - b1*c3*v - (b3*c2 - b2*c3)*u - (b2*c1 - b1*c2)*f)*Zs)/m
-            Ya = (m*Ys - (a3*c1*v - a1*c3*v - (a3*c2 - a2*c3)*u - (a2*c1 - a1*c2)*f)*Za + (a3*c1*v - a1*c3*v - (a3*c2 - a2*c3)*u - (a2*c1 - a1*c2)*f)*Zs)/m
-
-            y, x = raster.index(Xa, Ya)
-            print(x, y)
-            exit(1)
-
+        # Camera to min Z
+        dz = Za - Zs
+        dx = x - cam_grid_x
+        dy = y - cam_grid_y
+        ray_length = np.sqrt(dx**2 + dy**2)
+        prev_z = None
+        hit_z = None
+        for pt in ray_pts:
+            if pt[0] >= 0 and pt[0] < self.dem_data.shape[1] and pt[1] >= 0 and pt[1] < self.dem_data.shape[0]:
+                pix_z = self.dem_data[*pt]
+                pt_dx = pt[0] - cam_grid_x
+                pt_dy = pt[1] - cam_grid_y
+                pt_length = np.sqrt(pt_dx**2 + pt_dy**2)
+                ray_z = Zs + (pt_length / ray_length) * dz
+                if ray_z < pix_z:
+                    # We passed the surface, calculate the midpoint
+                    hit_z = (pix_z + prev_z) / 2.0
+                    break
+                prev_z = pix_z
+        
+        if hit_z is not None:
+            print(hit_z)
+        exit(1)
     # p.cam2world("image.JPG", [(x, y), ...]) --> ((x, y, z), ...) (geographic coordinates)
 
     def cam2geoJSON(self, image, coordinates):

@@ -6,6 +6,10 @@ class InvalidArgError(Exception):
     """Invalid argument passed to function"""
     pass
 
+class CannotProjectError(Exception):
+    """The point cannot be projected"""
+    pass
+
 class GeoError(CameraLibError):
     """A georeferencing related error"""
     pass

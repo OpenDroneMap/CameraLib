@@ -53,3 +53,11 @@ def get_utm_xyz(raster_path, latitude, longitude, z_sample_window=1, z_sample_st
         z = sample_z(d, x, y, z_sample_window, z_sample_strategy)
     
     return x, y, z
+
+
+def dem_coordinates(raster, cpx, cpy):
+    """Get the raster coordinates 
+
+    :param cpx principal point X (image coordinates)
+    :param cpy principal point Y (image coordinates)
+    """
