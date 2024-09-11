@@ -2,19 +2,19 @@ import os
 import json
 import numpy as np
 import rasterio
-from skimage.draw import line
-from cameralib.geo import get_utm_xyz 
+from cameralib.geo import get_utm_xyz, get_latlonz
 from cameralib.camera import load_shots, load_cameras, map_pixels
 from cameralib.exceptions import *
 
 class Projector:
-    def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm'):
+    def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm', raycast_threshold=1.0):
         if not os.path.isdir(project_path):
             raise IOError(f"{project_path} is not a valid path to an ODM project")
         
         self.project_path = project_path
         self.z_sample_window = z_sample_window
         self.z_sample_strategy = z_sample_strategy
+        self.raycast_threshold = raycast_threshold
 
         self.dsm_path = os.path.abspath(os.path.join(project_path, "odm_dem", "dsm.tif"))
         self.dtm_path = os.path.abspath(os.path.join(project_path, "odm_dem", "dtm.tif"))
@@ -38,8 +38,8 @@ class Projector:
     def _read_dem(self):
         if self.raster is None:
             self.raster = rasterio.open(self.dem_path, 'r')
-            self.dem_data = self.raster.read(1, masked=True)
-            self.min_z = self.dem_data.min()
+            self.dem_data = self.raster.read(1)
+            self.min_z = self.dem_data[self.dem_data!=self.raster.nodata].min()
 
     def __del__(self):
         if self.raster is not None:
@@ -63,65 +63,87 @@ class Projector:
         cam_id = s['cam_id'].replace("v2 ", "")
         cam = self.cameras[cam_id]
 
-        undistorted_uv = map_pixels(cam, cam.undistorted(), np.array(coordinates, dtype=np.float64))
         self._read_dem()
 
         r = s['rotation']
-        a1 = r[0][0]
-        b1 = r[0][1]
-        c1 = r[0][2]
-        a2 = r[1][0]
-        b2 = r[1][1]
-        c2 = r[1][2]
-        a3 = r[2][0]
-        b3 = r[2][1]
-        c3 = r[2][2]
-
         focal = s['focal']
         img_w = s['width']
         img_h = s['height']
         f = focal * max(img_h, img_w)
-        Xs, Ys, Zs = s['translation']
-        cam_grid_y, cam_grid_x = self.raster.index(Xs, Ys)
+        t = s['translation'].reshape(3, 1)
+        resolution_step = self.raster.transform[0] / np.sqrt(2) 
 
-        # Get the grid coordinates of the ray projected from the camera via (u,v)
-        # The Xa,Ya equations are just derived from the colinearity equations
-        # solving for Xa and Ya instead of x,y
-        Za = self.min_z
-        u,v = undistorted_uv[0][0] - img_w / 2.0, undistorted_uv[0][1] - img_h / 2.0
-        m = (a3*b1*v - a1*b3*v - (a3*b2 - a2*b3)*u - (a2*b1 - a1*b2)*f)
-        Xa = (m*Xs + (b3*c1*v - b1*c3*v - (b3*c2 - b2*c3)*u - (b2*c1 - b1*c2)*f)*Za - (b3*c1*v - b1*c3*v - (b3*c2 - b2*c3)*u - (b2*c1 - b1*c2)*f)*Zs)/m
-        Ya = (m*Ys - (a3*c1*v - a1*c3*v - (a3*c2 - a2*c3)*u - (a2*c1 - a1*c2)*f)*Za + (a3*c1*v - a1*c3*v - (a3*c2 - a2*c3)*u - (a2*c1 - a1*c2)*f)*Zs)/m
-
-        y, x = self.raster.index(Xa, Ya)
-        ray_pts = np.column_stack(line(cam_grid_x, cam_grid_y, x, y))
-
-        if Za > Zs:
-            raise CannotProjectError(f"Camera is below the surface ({Zs}m)")
+        rays_cam = cam.pixel_bearing_many(np.array(coordinates)).T
+        rays_world = np.matmul(r, rays_cam).T
+        results = []
         
-        # Camera to min Z
-        dz = Za - Zs
-        dx = x - cam_grid_x
-        dy = y - cam_grid_y
-        ray_length = np.sqrt(dx**2 + dy**2)
-        prev_z = None
-        hit_z = None
-        for pt in ray_pts:
-            if pt[0] >= 0 and pt[0] < self.dem_data.shape[1] and pt[1] >= 0 and pt[1] < self.dem_data.shape[0]:
-                pix_z = self.dem_data[*pt]
-                pt_dx = pt[0] - cam_grid_x
-                pt_dy = pt[1] - cam_grid_y
-                pt_length = np.sqrt(pt_dx**2 + pt_dy**2)
-                ray_z = Zs + (pt_length / ray_length) * dz
-                if ray_z < pix_z:
-                    # We passed the surface, calculate the midpoint
-                    hit_z = (pix_z + prev_z) / 2.0
+        for ray_world in rays_world:
+            ray_world = ray_world.reshape((3, 1))
+            if float(ray_world[2]) > 0:
+                print(f"Warning: Ray from {image} pointing up, cannot raycast")
+                continue
+        
+            step = 0 # meters
+            hit = None
+            prev_x = None
+            prev_y = None
+
+            while True:
+                ray_pt = (ray_world * step + t).ravel()
+                step += resolution_step
+
+                # No hits
+                if ray_pt[2] < self.min_z:
                     break
-                prev_z = pix_z
-        
-        if hit_z is not None:
-            print(hit_z)
-        exit(1)
+
+                y, x = self.raster.index(ray_pt[0], ray_pt[1])
+
+                if x == prev_x and y == prev_y:
+                    continue
+                prev_x, prev_y = x, y
+
+                if x >= 0 and x < self.dem_data.shape[1] and y >= 0 and y < self.dem_data.shape[0]:
+                    pix_z = self.dem_data[y,x]
+
+                    if pix_z == self.raster.nodata:
+                        continue
+
+                    # Above threshold? Skip more expensive cell intersection test
+                    if abs(pix_z - ray_pt[2]) > self.raycast_threshold:
+                        continue
+                    
+                    # Does our ray intersect the raster cell?
+                    rast2world = self.raster.transform
+
+                    # 0--1
+                    # |  |
+                    # 2--3
+                    cell0 = np.append(np.array([rast2world * [x - 0.5, y - 0.5]]), pix_z)
+                    cell1 = np.append(np.array([rast2world * [x + 0.5, y - 0.5]]), pix_z)
+                    cell2 = np.append(np.array([rast2world * [x - 0.5, y + 0.5]]), pix_z)
+                    
+                    ds10 = cell1 - cell0
+                    ds20 = cell2 - cell0
+                    normal = np.cross(ds10, ds20)
+                    delta = ray_pt - s['translation']
+                    ndotdelta = np.dot(normal, delta)
+                    if abs(ndotdelta) < 1e-6:
+                        continue
+                    
+                    ts = -np.dot(normal, ray_pt - cell0) / ndotdelta
+                    m = ray_pt + delta * ts
+                    dms0 = m - cell0
+                    u = np.dot(dms0, ds10)
+                    v = np.dot(dms0, ds20)
+                    if u >= 0 and u <= np.dot(ds10,ds10) and v >= 0 and v<= np.dot(ds20, ds20):
+                        # Hit
+                        result = get_latlonz(self.raster, self.dem_data, y, x, z_sample_window=self.z_sample_window, z_sample_strategy=self.z_sample_strategy)
+                        break
+            
+            results.append(result)
+        return results
+                        
+
     # p.cam2world("image.JPG", [(x, y), ...]) --> ((x, y, z), ...) (geographic coordinates)
 
     def cam2geoJSON(self, image, coordinates):
