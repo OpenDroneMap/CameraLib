@@ -74,12 +74,11 @@ def get_utm_xyz(raster_path, latitude, longitude, z_sample_window=1, z_sample_st
     
     return x, y, z
 
-def get_latlonz(raster, dem_data, row, col, z_sample_window=1, z_sample_strategy='median'):
+def get_latlonz(raster, dem_data, row, col, easting, northing, z_sample_window=1, z_sample_strategy='median'):
     if raster.crs is None:
         raise GeoError(f"{raster_path} does not have a CRS")
     
     dst = CRS({'init':'EPSG:4326'})
-    easting, northing = raster.xy(row, col)
     longitude, latitude = transform(raster.crs, dst, [easting], [northing])
     z = raster_sample_z(dem_data, raster.nodata, row, col, window=z_sample_window, strategy=z_sample_strategy)
 

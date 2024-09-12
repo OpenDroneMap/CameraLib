@@ -137,9 +137,8 @@ class Projector:
                     v = np.dot(dms0, ds20)
                     if u >= 0 and u <= np.dot(ds10,ds10) and v >= 0 and v<= np.dot(ds20, ds20):
                         # Hit
-                        # print(x, y)
-                        # print(m) # TODO: should we use m instead? subpixel precision...
-                        result = get_latlonz(self.raster, self.dem_data, y, x, z_sample_window=self.z_sample_window, z_sample_strategy=self.z_sample_strategy)
+                        easting, northing = m[0], m[1]
+                        result = get_latlonz(self.raster, self.dem_data, y, x, easting, northing, z_sample_window=self.z_sample_window, z_sample_strategy=self.z_sample_strategy)
                         break
             
             results.append(result)
