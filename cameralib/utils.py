@@ -1,22 +1,30 @@
-import numpy as np
-import math
-import sys
+import json
+import os
 
-def rodrigues_vec_to_rotation_mat(rodrigues_vec):
-    theta = np.linalg.norm(rodrigues_vec)
-    if theta < sys.float_info.epsilon:
-        rotation_mat = np.eye(3, dtype=float)
-    else:
-        r = rodrigues_vec / theta
-        ident = np.eye(3, dtype=float)
-        r_rT = np.array(
-            [
-                [r[0] * r[0], r[0] * r[1], r[0] * r[2]],
-                [r[1] * r[0], r[1] * r[1], r[1] * r[2]],
-                [r[2] * r[0], r[2] * r[1], r[2] * r[2]],
-            ]
-        )
-        r_cross = np.array([[0, -r[2], r[1]], [r[2], 0, -r[0]], [-r[1], r[0], 0]], dtype=float)
-        rotation_mat = math.cos(theta) * ident + (1 - math.cos(theta)) * r_rT + math.sin(theta) * r_cross
+def read_xanylabeling_annotations(annotation):
+    """Read an annotation file generated with X-AnyLabeling (https://github.com/CVHub520/X-AnyLabeling)
+    
+    Args:
+        annotation (str): Path to annotation JSON file
+    
+    Returns:
+        list of dict: a list containing dictionaries with the following information
+        [
+            {
+                'image': str            # Image filename
+                'coordinates': list     # Coordinates of shape
+                'properties': dict      # Properties of the shape
+            }
+        ]
+    """
+    with open(annotation, 'r') as f:
+        j = json.load(f)
+    
+    return [{
+            'image': os.path.basename(j['imagePath']),
+            'coordinates': s['points'],
+            'properties': {
+                'label': s.get('label')
+            }
+        }for s in j['shapes']]
 
-    return rotation_mat

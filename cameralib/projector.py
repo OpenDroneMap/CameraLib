@@ -87,6 +87,7 @@ class Projector:
             hit = None
             prev_x = None
             prev_y = None
+            result = None
 
             while True:
                 ray_pt = (ray_world * step + t).ravel()
@@ -118,9 +119,9 @@ class Projector:
                     # 0--1
                     # |  |
                     # 2--3
-                    cell0 = np.append(np.array([rast2world * [x - 0.5, y - 0.5]]), pix_z)
-                    cell1 = np.append(np.array([rast2world * [x + 0.5, y - 0.5]]), pix_z)
-                    cell2 = np.append(np.array([rast2world * [x - 0.5, y + 0.5]]), pix_z)
+                    cell0 = np.append(np.array([rast2world * [x - 1.0, y - 1.0]]), pix_z)
+                    cell1 = np.append(np.array([rast2world * [x + 1.0, y - 1.0]]), pix_z)
+                    cell2 = np.append(np.array([rast2world * [x - 1.0, y + 1.0]]), pix_z)
                     
                     ds10 = cell1 - cell0
                     ds20 = cell2 - cell0
@@ -149,19 +150,21 @@ class Projector:
 
     def cam2geoJSON(self, image, coordinates, properties={}):
         results = self.cam2world(image, coordinates)
+
         if 'image' not in properties:
             properties['image'] = image
         
         if len(results) == 1:
             geom = 'Point'
             lat,lon,z = results[0]
-            coordinates = [lon,lat,z]
+            coords = [lon,lat,z]
         elif len(results) == 2:
             geom = 'LineString'
-            coordinates = list([lon,lat,z] for lat,lon,z in results)
+            coords = list([lon,lat,z] for lat,lon,z in results)
         else:
             geom = 'Polygon'
-            coordinates = [list([lon,lat,z] for lat,lon,z in results)]
+            coords = [list([lon,lat,z] for lat,lon,z in results)]
+            coords[0].append(coords[0][0])
 
         j = {
             'type': 'FeatureCollection',
@@ -169,7 +172,7 @@ class Projector:
                 'type': 'Feature',
                 'properties': properties,
                 'geometry': {
-                    'coordinates': coordinates,
+                    'coordinates': coords,
                     'type': geom
                 }
             }]
