@@ -49,13 +49,14 @@ class Projector:
             self.raster.close()
             self.raster = None
 
-    def cam2world(self, image, coordinates):
+    def cam2world(self, image, coordinates, normalized=False):
         """Project 2D pixel coordinates in camera space to geographic coordinates
         
         Args:
             image (str): image filename
             coordinates (list of tuples): x,y pixel coordinates
-
+            normalized (bool): whether the input coordinates are normalized to [0..1]
+        
         Returns:
             list of tuples: longitude,latitude,elevation for each coordinate pair
         """
@@ -72,6 +73,11 @@ class Projector:
         focal = s['focal']
         img_w = s['width']
         img_h = s['height']
+        if normalized:
+            print(image)
+            coordinates *= np.array([img_w, img_h])
+            print(coordinates)
+
         f = focal * max(img_h, img_w)
         t = s['translation'].reshape(3, 1)
         resolution_step = self.raster.transform[0] / np.sqrt(2) 
@@ -87,7 +93,6 @@ class Projector:
                 continue
         
             step = 0 # meters
-            hit = None
             prev_x = None
             prev_y = None
             result = None
@@ -152,8 +157,19 @@ class Projector:
 
     # p.cam2world("image.JPG", [(x, y), ...]) --> ((x, y, z), ...) (geographic coordinates)
 
-    def cam2geoJSON(self, image, coordinates, properties={}):
-        results = self.cam2world(image, coordinates)
+    def cam2geoJSON(self, image, coordinates, properties={}, normalized=False):
+        """Project 2D pixel coordinates in camera space to geographic coordinates and output the result
+        as GeoJSON. A single coordinate results in a Point, two coordinates into a LineString and more than two into a Polygon.
+        
+        Args:
+            image (str): image filename
+            coordinates (list of tuples): x,y pixel coordinates
+            normalized (bool): whether the input coordinates are normalized to [0..1]
+        
+        Returns:
+            dict: GeoJSON
+        """
+        results = self.cam2world(image, coordinates, normalized)
 
         if 'image' not in properties:
             properties['image'] = image
