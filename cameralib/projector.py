@@ -7,6 +7,14 @@ from cameralib.camera import load_shots, load_cameras, map_pixels
 from cameralib.exceptions import *
 
 class Projector:
+    """A projector to perform camera operations on ODM projects
+    
+    Args:
+        project_path (str): Path to ODM project
+        z_sample_window (int): Size of the window to use when sampling elevation values
+        z_sample_strategy (str): Strategy to use when sampling elevation values. Can be one of: ['minimum', 'maximum', 'average', 'median']
+        raycast_resolution_multiplier (float): Value that affects the ray sampling resolution. Larger values can lead to slightly more precise results, but increase processing time.
+    """
     def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm', raycast_resolution_multiplier=np.sqrt(2)):
         if not os.path.isdir(project_path):
             raise IOError(f"{project_path} is not a valid path to an ODM project")
@@ -91,8 +99,6 @@ class Projector:
                 continue
         
             step = 0 # meters
-            prev_x = None
-            prev_y = None
             prev_pt = None
             result = None
 
@@ -105,10 +111,6 @@ class Projector:
                     break
                 
                 y, x = self.raster.index(ray_pt[0], ray_pt[1], op=round)
-
-                if x == prev_x and y == prev_y:
-                    continue
-                prev_x, prev_y = x, y
 
                 if x >= 0 and x < self.dem_data.shape[1] and y >= 0 and y < self.dem_data.shape[0]:
                     pix_z = raster_sample_z(self.dem_data, self.raster.nodata, y, x, window=self.z_sample_window, strategy=self.z_sample_strategy)
@@ -127,7 +129,6 @@ class Projector:
                         break
 
                     prev_pt = ray_pt
-
             
             results.append(result)
 
