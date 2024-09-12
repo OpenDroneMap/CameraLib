@@ -76,13 +76,27 @@ class Projector:
         if normalized:
             coordinates *= np.array([img_w, img_h])
 
-        f = focal * max(img_h, img_w)
         t = s['translation'].reshape(3, 1)
         resolution_step = self.raster.transform[0] / np.sqrt(2) 
 
         rays_cam = cam.pixel_bearing_many(np.array(coordinates)).T
-        rays_world = np.matmul(r, rays_cam).T
+        rays_world = np.matmul(np.linalg.inv(r), rays_cam).T
         results = []
+
+
+        from matplotlib import pyplot as plt
+        # im = plt.imread(os.path.join(self.project_path, "images", image))
+        ortho = os.path.join(self.project_path, "odm_orthophoto", "odm_orthophoto.tif")
+        im = plt.imread(ortho)
+        with rasterio.open(ortho) as f:
+            o_w = f.width
+            o_h = f.height
+        
+        fig, ax = plt.subplots()
+        # im = ax.imshow(im, extent=[0, img_w, img_h, 0])
+        im = ax.imshow(im, extent=[0, o_w, o_h, 0])
+        
+        print(coordinates)
         
         for ray_world in rays_world:
             ray_world = ray_world.reshape((3, 1))
@@ -95,6 +109,8 @@ class Projector:
             prev_x = None
             prev_y = None
             result = None
+
+            tmp = []
 
             while True:
                 ray_pt = (ray_world * step + t).ravel()
@@ -110,6 +126,8 @@ class Projector:
                     continue
                 prev_x, prev_y = x, y
 
+                tmp.append((x, y))
+
                 if x >= 0 and x < self.dem_data.shape[1] and y >= 0 and y < self.dem_data.shape[0]:
                     pix_z = raster_sample_z(self.dem_data, self.raster.nodata, y, x, window=self.z_sample_window, strategy=self.z_sample_strategy)
 
@@ -121,25 +139,25 @@ class Projector:
                         continue
                     
                     # Does our ray intersect the raster cell?
-                    rast2world = self.raster.transform
 
                     # 0--1
                     # |  |
                     # 2--3
-                    cell0 = np.append(np.array([rast2world * [x - 0.6, y - 0.6]]), pix_z)
-                    cell1 = np.append(np.array([rast2world * [x + 0.6, y - 0.6]]), pix_z)
-                    cell2 = np.append(np.array([rast2world * [x - 0.6, y + 0.6]]), pix_z)
+                    cell0 = np.append(np.array([self.raster.xy(y - 0.6, x - 0.6)]), pix_z)
+                    cell1 = np.append(np.array([self.raster.xy(y - 0.6, x + 0.6)]), pix_z)
+                    cell2 = np.append(np.array([self.raster.xy(y + 0.6, x - 0.6)]), pix_z)
                     
                     ds10 = cell1 - cell0
                     ds20 = cell2 - cell0
                     normal = np.cross(ds10, ds20)
-                    delta = ray_pt - s['translation']
+                    r1 = (ray_world * step * 100 + t).ravel()
+                    delta = r1 - s['translation']
                     ndotdelta = np.dot(normal, delta)
                     if abs(ndotdelta) < 1e-6:
                         continue
                     
-                    ts = -np.dot(normal, ray_pt - cell0) / ndotdelta
-                    m = ray_pt + delta * ts
+                    ts = -np.dot(normal, r1 - cell0) / ndotdelta
+                    m = r1 + delta * ts
                     dms0 = m - cell0
                     u = np.dot(dms0, ds10)
                     v = np.dot(dms0, ds20)
@@ -151,6 +169,10 @@ class Projector:
                         break
             
             results.append(result)
+
+            plt.plot([tmp[0][0], tmp[-1][0]], [tmp[0][1], tmp[-1][1]], color="blue", linewidth=3)
+            plt.show()
+
         return results
                         
 
