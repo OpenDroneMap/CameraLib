@@ -2,7 +2,7 @@ Welcome to CameraLib's documentation!
 =================================
 
 .. automodule:: cameralib
-    :members:
+    :members: Projector
 
 .. automodule:: cameralib.utils
     :members:

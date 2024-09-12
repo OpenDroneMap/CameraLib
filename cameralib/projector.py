@@ -7,15 +7,15 @@ from cameralib.camera import load_shots, load_cameras, map_pixels
 from cameralib.exceptions import *
 
 class Projector:
-    """A projector to perform camera operations on ODM projects
+    """A projector to perform camera coordinates operations on ODM projects
     
     Args:
         project_path (str): Path to ODM project
         z_sample_window (int): Size of the window to use when sampling elevation values
         z_sample_strategy (str): Strategy to use when sampling elevation values. Can be one of: ['minimum', 'maximum', 'average', 'median']
-        raycast_resolution_multiplier (float): Value that affects the ray sampling resolution. Larger values can lead to slightly more precise results, but increase processing time.
+        raycast_resolution_multiplier (float): Value that affects the ray sampling resolution. Lower values can lead to slightly more precise results, but increase processing time.
     """
-    def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm', raycast_resolution_multiplier=np.sqrt(2)):
+    def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm', raycast_resolution_multiplier=0.7071):
         if not os.path.isdir(project_path):
             raise IOError(f"{project_path} is not a valid path to an ODM project")
         
@@ -85,7 +85,7 @@ class Projector:
             coordinates *= np.array([img_w, img_h])
 
         t = s['translation'].reshape(3, 1)
-        resolution_step = abs(self.raster.transform[0]) / self.raycast_resolution_multiplier
+        resolution_step = abs(self.raster.transform[0]) * self.raycast_resolution_multiplier
 
         rays_cam = cam.pixel_bearing_many(np.array(coordinates)).T
         rays_world = np.matmul(np.linalg.inv(r), rays_cam).T
@@ -192,7 +192,9 @@ class Projector:
             [
                 {
                     'filename': str     # The filename of the image associated with the camera
+
                     'x': float          # The x-coordinate in camera space
+
                     'y': float          # The y-coordinate in camera space 
                 },
                 ...

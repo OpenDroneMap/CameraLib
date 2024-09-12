@@ -14,8 +14,11 @@ def read_xanylabeling_annotations(annotation):
         [
             {
                 'image': str            # Image filename
+
                 'coordinates': list     # Coordinates of annotation
-                'properties': dict      # Properties of the annotation,
+
+                'properties': dict     # Properties of the annotation
+
                 'normalized': bool      # False
             }
         ]
@@ -45,8 +48,11 @@ def read_yolov7_annotations(labels_dir, image_suffix='.JPG'):
         [
             {
                 'image': str            # Image filename
+
                 'coordinates': list     # Coordinates of annotation
-                'properties': dict      # Label of the annotation,
+
+                'properties': dict      # Label of the annotation
+                
                 'normalized': bool      # True
             }
         ]
