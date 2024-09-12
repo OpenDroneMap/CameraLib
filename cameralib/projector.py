@@ -2,7 +2,7 @@ import os
 import json
 import numpy as np
 import rasterio
-from cameralib.geo import get_utm_xyz, get_latlonz
+from cameralib.geo import get_utm_xyz, get_latlon, raster_sample_z
 from cameralib.camera import load_shots, load_cameras, map_pixels
 from cameralib.exceptions import *
 
@@ -15,6 +15,9 @@ class Projector:
         self.z_sample_window = z_sample_window
         self.z_sample_strategy = z_sample_strategy
         self.raycast_threshold = raycast_threshold
+
+        if self.z_sample_window % 2 == 0 or self.z_sample_window <= 0:
+            raise InvalidArgError("z_sample_window must be an odd number > 0")
 
         self.dsm_path = os.path.abspath(os.path.join(project_path, "odm_dem", "dsm.tif"))
         self.dtm_path = os.path.abspath(os.path.join(project_path, "odm_dem", "dtm.tif"))
@@ -104,7 +107,7 @@ class Projector:
                 prev_x, prev_y = x, y
 
                 if x >= 0 and x < self.dem_data.shape[1] and y >= 0 and y < self.dem_data.shape[0]:
-                    pix_z = self.dem_data[y,x]
+                    pix_z = raster_sample_z(self.dem_data, self.raster.nodata, y, x, window=self.z_sample_window, strategy=self.z_sample_strategy)
 
                     if pix_z == self.raster.nodata:
                         continue
@@ -139,7 +142,8 @@ class Projector:
                     if u >= 0 and u <= np.dot(ds10,ds10) and v >= 0 and v<= np.dot(ds20, ds20):
                         # Hit
                         easting, northing = m[0], m[1]
-                        result = get_latlonz(self.raster, self.dem_data, y, x, easting, northing, z_sample_window=self.z_sample_window, z_sample_strategy=self.z_sample_strategy)
+                        lat, lon = get_latlon(self.raster, easting, northing)
+                        result = (lat,lon,pix_z)
                         break
             
             results.append(result)

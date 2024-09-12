@@ -33,9 +33,6 @@ def _get_sample_z(data, nodata, strategy):
     return z
 
 def raster_sample_z(rast_data, nodata, row, col, window=1, strategy='median'):
-    if window % 2 == 0 or window <= 0:
-        raise InvalidArgError("window must be an odd number > 0")
-    
     half_win = window / 2.0
     h, w = rast_data.shape
     try:
@@ -46,9 +43,6 @@ def raster_sample_z(rast_data, nodata, row, col, window=1, strategy='median'):
         raise OutOfBoundsError("Cannot read Z value: %s" % str(e))
 
 def sample_z(rast_ds, x, y, window=1, strategy='median'):
-    if window % 2 == 0 or window <= 0:
-        raise InvalidArgError("window must be an odd number > 0")
-    
     row, col = rast_ds.index(x, y, op=round)
     half_win = window / 2.0
 
@@ -74,12 +68,11 @@ def get_utm_xyz(raster_path, latitude, longitude, z_sample_window=1, z_sample_st
     
     return x, y, z
 
-def get_latlonz(raster, dem_data, row, col, easting, northing, z_sample_window=1, z_sample_strategy='median'):
+def get_latlon(raster, easting, northing):
     if raster.crs is None:
         raise GeoError(f"{raster_path} does not have a CRS")
     
     dst = CRS({'init':'EPSG:4326'})
     longitude, latitude = transform(raster.crs, dst, [easting], [northing])
-    z = raster_sample_z(dem_data, raster.nodata, row, col, window=z_sample_window, strategy=z_sample_strategy)
 
-    return latitude[0], longitude[0], z
+    return latitude[0], longitude[0]
