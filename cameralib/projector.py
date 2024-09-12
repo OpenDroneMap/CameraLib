@@ -83,21 +83,6 @@ class Projector:
         rays_world = np.matmul(np.linalg.inv(r), rays_cam).T
         results = []
 
-
-        from matplotlib import pyplot as plt
-        # im = plt.imread(os.path.join(self.project_path, "images", image))
-        ortho = os.path.join(self.project_path, "odm_orthophoto", "odm_orthophoto.tif")
-        im = plt.imread(ortho)
-        with rasterio.open(ortho) as f:
-            o_w = f.width
-            o_h = f.height
-        
-        fig, ax = plt.subplots()
-        # im = ax.imshow(im, extent=[0, img_w, img_h, 0])
-        im = ax.imshow(im, extent=[0, o_w, o_h, 0])
-        
-        print(coordinates)
-        
         for ray_world in rays_world:
             ray_world = ray_world.reshape((3, 1))
 
@@ -109,8 +94,6 @@ class Projector:
             prev_x = None
             prev_y = None
             result = None
-
-            tmp = []
 
             while True:
                 ray_pt = (ray_world * step + t).ravel()
@@ -125,8 +108,6 @@ class Projector:
                 if x == prev_x and y == prev_y:
                     continue
                 prev_x, prev_y = x, y
-
-                tmp.append((x, y))
 
                 if x >= 0 and x < self.dem_data.shape[1] and y >= 0 and y < self.dem_data.shape[0]:
                     pix_z = raster_sample_z(self.dem_data, self.raster.nodata, y, x, window=self.z_sample_window, strategy=self.z_sample_strategy)
@@ -143,9 +124,9 @@ class Projector:
                     # 0--1
                     # |  |
                     # 2--3
-                    cell0 = np.append(np.array([self.raster.xy(y - 0.6, x - 0.6)]), pix_z)
-                    cell1 = np.append(np.array([self.raster.xy(y - 0.6, x + 0.6)]), pix_z)
-                    cell2 = np.append(np.array([self.raster.xy(y + 0.6, x - 0.6)]), pix_z)
+                    cell0 = np.append(np.array([self.raster.xy(y - 10.0, x - 10.0)]), pix_z)
+                    cell1 = np.append(np.array([self.raster.xy(y - 10.0, x + 10.0)]), pix_z)
+                    cell2 = np.append(np.array([self.raster.xy(y + 10.0, x - 10.0)]), pix_z)
                     
                     ds10 = cell1 - cell0
                     ds20 = cell2 - cell0
@@ -169,9 +150,6 @@ class Projector:
                         break
             
             results.append(result)
-
-            plt.plot([tmp[0][0], tmp[-1][0]], [tmp[0][1], tmp[-1][1]], color="blue", linewidth=3)
-            plt.show()
 
         return results
                         
