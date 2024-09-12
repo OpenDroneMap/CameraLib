@@ -9,6 +9,8 @@ Installation:
 Quickstart:
 -----------
 
+Make sure that your ODM project has an elevation model available (pass the ``--dsm`` option when processing a dataset), then:
+
    >>> from cameralib import Projector
    >>> p = Projector("/dataset/brighton")
    >>> p.world2cams(46.8423725961765, -91.99395518749954)
@@ -18,7 +20,7 @@ Quickstart:
 
 Samples:
 --------
- * `Create Task`_
+ * `Hello World`_
  * `Get Node Info`_
 
 Getting Help / Reporting Issues:
@@ -36,7 +38,7 @@ API
 .. _OpenDroneMap:
     https://www.opendronemap.org
 .. _Create Task:
-   https://github.com/OpenDroneMap/CameraLib/blob/main/examples/create_task.py
+   https://github.com/OpenDroneMap/CameraLib/blob/main/examples/hello_world.py
 .. _Get Node Info:
    https://github.com/OpenDroneMap/CameraLib/blob/main/examples/get_node_info.py
 .. _report it:

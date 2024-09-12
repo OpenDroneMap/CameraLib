@@ -13,6 +13,7 @@ class Projector:
         project_path (str): Path to ODM project
         z_sample_window (int): Size of the window to use when sampling elevation values
         z_sample_strategy (str): Strategy to use when sampling elevation values. Can be one of: ['minimum', 'maximum', 'average', 'median']
+        z_sample_target (str): Elevation raster to use for sampling elevation. One of: ['dsm', 'dtm']
         raycast_resolution_multiplier (float): Value that affects the ray sampling resolution. Lower values can lead to slightly more precise results, but increase processing time.
     """
     def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm', raycast_resolution_multiplier=0.7071):
@@ -196,8 +197,7 @@ class Projector:
                     'x': float          # The x-coordinate in camera space
 
                     'y': float          # The y-coordinate in camera space 
-                },
-                ...
+                }
             ]
         """
         Xa, Ya, Za = get_utm_xyz(self.dem_path, longitude, latitude, 
