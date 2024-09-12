@@ -74,9 +74,7 @@ class Projector:
         img_w = s['width']
         img_h = s['height']
         if normalized:
-            print(image)
             coordinates *= np.array([img_w, img_h])
-            print(coordinates)
 
         f = focal * max(img_h, img_w)
         t = s['translation'].reshape(3, 1)
@@ -88,6 +86,7 @@ class Projector:
         
         for ray_world in rays_world:
             ray_world = ray_world.reshape((3, 1))
+
             if float(ray_world[2]) > 0:
                 print(f"Warning: Ray from {image} pointing up, cannot raycast")
                 continue
@@ -104,7 +103,7 @@ class Projector:
                 # No hits
                 if ray_pt[2] < self.min_z:
                     break
-
+                
                 y, x = self.raster.index(ray_pt[0], ray_pt[1], op=round)
 
                 if x == prev_x and y == prev_y:
@@ -155,8 +154,6 @@ class Projector:
         return results
                         
 
-    # p.cam2world("image.JPG", [(x, y), ...]) --> ((x, y, z), ...) (geographic coordinates)
-
     def cam2geoJSON(self, image, coordinates, properties={}, normalized=False):
         """Project 2D pixel coordinates in camera space to geographic coordinates and output the result
         as GeoJSON. A single coordinate results in a Point, two coordinates into a LineString and more than two into a Polygon.
@@ -201,8 +198,6 @@ class Projector:
         return j
 
     
-    # geojson = p.cam2geoJSON("image.JPG", [(x, y), ...]) --> GeoJSON
-
     def world2cams(self, longitude, latitude, normalized=False):
         """Find which cameras in the reconstruction see a particular location.
 
