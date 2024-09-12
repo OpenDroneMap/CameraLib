@@ -137,6 +137,8 @@ class Projector:
                     v = np.dot(dms0, ds20)
                     if u >= 0 and u <= np.dot(ds10,ds10) and v >= 0 and v<= np.dot(ds20, ds20):
                         # Hit
+                        # print(x, y)
+                        # print(m) # TODO: should we use m instead? subpixel precision...
                         result = get_latlonz(self.raster, self.dem_data, y, x, z_sample_window=self.z_sample_window, z_sample_strategy=self.z_sample_strategy)
                         break
             
@@ -146,8 +148,36 @@ class Projector:
 
     # p.cam2world("image.JPG", [(x, y), ...]) --> ((x, y, z), ...) (geographic coordinates)
 
-    def cam2geoJSON(self, image, coordinates):
-        pass
+    def cam2geoJSON(self, image, coordinates, properties={}):
+        results = self.cam2world(image, coordinates)
+        if 'image' not in properties:
+            properties['image'] = image
+        
+        if len(results) == 1:
+            geom = 'Point'
+            lat,lon,z = results[0]
+            coordinates = [lon,lat,z]
+        elif len(results) == 2:
+            geom = 'LineString'
+            coordinates = list([lon,lat,z] for lat,lon,z in results)
+        else:
+            geom = 'Polygon'
+            coordinates = [list([lon,lat,z] for lat,lon,z in results)]
+
+        j = {
+            'type': 'FeatureCollection',
+            'features':[{
+                'type': 'Feature',
+                'properties': properties,
+                'geometry': {
+                    'coordinates': coordinates,
+                    'type': geom
+                }
+            }]
+        }
+        
+        return j
+
     
     # geojson = p.cam2geoJSON("image.JPG", [(x, y), ...]) --> GeoJSON
 
