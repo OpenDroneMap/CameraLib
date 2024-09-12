@@ -49,7 +49,7 @@ def sample_z(rast_ds, x, y, window=1, strategy='median'):
     if window % 2 == 0 or window <= 0:
         raise InvalidArgError("window must be an odd number > 0")
     
-    row, col = rast_ds.index(x, y)
+    row, col = rast_ds.index(x, y, op=round)
     half_win = window / 2.0
 
     try:

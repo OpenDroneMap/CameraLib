@@ -97,7 +97,7 @@ class Projector:
                 if ray_pt[2] < self.min_z:
                     break
 
-                y, x = self.raster.index(ray_pt[0], ray_pt[1])
+                y, x = self.raster.index(ray_pt[0], ray_pt[1], op=round)
 
                 if x == prev_x and y == prev_y:
                     continue
@@ -119,9 +119,9 @@ class Projector:
                     # 0--1
                     # |  |
                     # 2--3
-                    cell0 = np.append(np.array([rast2world * [x - 1.0, y - 1.0]]), pix_z)
-                    cell1 = np.append(np.array([rast2world * [x + 1.0, y - 1.0]]), pix_z)
-                    cell2 = np.append(np.array([rast2world * [x - 1.0, y + 1.0]]), pix_z)
+                    cell0 = np.append(np.array([rast2world * [x - 0.6, y - 0.6]]), pix_z)
+                    cell1 = np.append(np.array([rast2world * [x + 0.6, y - 0.6]]), pix_z)
+                    cell2 = np.append(np.array([rast2world * [x - 0.6, y + 0.6]]), pix_z)
                     
                     ds10 = cell1 - cell0
                     ds20 = cell2 - cell0
