@@ -7,14 +7,14 @@ from cameralib.camera import load_shots, load_cameras, map_pixels
 from cameralib.exceptions import *
 
 class Projector:
-    def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm', raycast_threshold=1.0):
+    def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm', raycast_resolution_multiplier=np.sqrt(2)):
         if not os.path.isdir(project_path):
             raise IOError(f"{project_path} is not a valid path to an ODM project")
         
         self.project_path = project_path
         self.z_sample_window = z_sample_window
         self.z_sample_strategy = z_sample_strategy
-        self.raycast_threshold = raycast_threshold
+        self.raycast_resolution_multiplier = raycast_resolution_multiplier
 
         if self.z_sample_window % 2 == 0 or self.z_sample_window <= 0:
             raise InvalidArgError("z_sample_window must be an odd number > 0")
@@ -77,7 +77,7 @@ class Projector:
             coordinates *= np.array([img_w, img_h])
 
         t = s['translation'].reshape(3, 1)
-        resolution_step = self.raster.transform[0] / np.sqrt(2) 
+        resolution_step = abs(self.raster.transform[0]) / self.raycast_resolution_multiplier
 
         rays_cam = cam.pixel_bearing_many(np.array(coordinates)).T
         rays_world = np.matmul(np.linalg.inv(r), rays_cam).T
@@ -93,6 +93,7 @@ class Projector:
             step = 0 # meters
             prev_x = None
             prev_y = None
+            prev_pt = None
             result = None
 
             while True:
@@ -115,39 +116,18 @@ class Projector:
                     if pix_z == self.raster.nodata:
                         continue
 
-                    # Above threshold? Skip more expensive cell intersection test
-                    if abs(pix_z - ray_pt[2]) > self.raycast_threshold:
-                        continue
-                    
-                    # Does our ray intersect the raster cell?
+                    if prev_pt is None:
+                        prev_pt = ray_pt
 
-                    # 0--1
-                    # |  |
-                    # 2--3
-                    cell0 = np.append(np.array([self.raster.xy(y - 10.0, x - 10.0)]), pix_z)
-                    cell1 = np.append(np.array([self.raster.xy(y - 10.0, x + 10.0)]), pix_z)
-                    cell2 = np.append(np.array([self.raster.xy(y + 10.0, x - 10.0)]), pix_z)
-                    
-                    ds10 = cell1 - cell0
-                    ds20 = cell2 - cell0
-                    normal = np.cross(ds10, ds20)
-                    r1 = (ray_world * step * 100 + t).ravel()
-                    delta = r1 - s['translation']
-                    ndotdelta = np.dot(normal, delta)
-                    if abs(ndotdelta) < 1e-6:
-                        continue
-                    
-                    ts = -np.dot(normal, r1 - cell0) / ndotdelta
-                    m = r1 + delta * ts
-                    dms0 = m - cell0
-                    u = np.dot(dms0, ds10)
-                    v = np.dot(dms0, ds20)
-                    if u >= 0 and u <= np.dot(ds10,ds10) and v >= 0 and v<= np.dot(ds20, ds20):
+                    if ray_pt[2] <= pix_z:
                         # Hit
-                        easting, northing = m[0], m[1]
-                        lat, lon = get_latlon(self.raster, easting, northing)
+                        midpoint = (prev_pt + ray_pt) / 2.0
+                        lat, lon = get_latlon(self.raster, midpoint[0], midpoint[1])
                         result = (lat,lon,pix_z)
                         break
+
+                    prev_pt = ray_pt
+
             
             results.append(result)
 
