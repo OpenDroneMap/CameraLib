@@ -18,8 +18,8 @@ Make sure that your ODM project has an elevation model available (pass the ``--d
    >>> p.cam2world("DJI_0028.JPG", [(3576.52, 898.97)])
    [(46.84237264716458, -91.9939552609622, 165.27200317382812)]
 
-Samples:
---------
+Examples:
+---------
  * `Hello World`_
  * `X-AnyLabeling annotations to GeoJSON`_
  * `Yolov7 annotations to GeoJSON`_
