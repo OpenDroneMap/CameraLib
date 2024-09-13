@@ -21,7 +21,8 @@ Make sure that your ODM project has an elevation model available (pass the ``--d
 Samples:
 --------
  * `Hello World`_
- * `Get Node Info`_
+ * `X-AnyLabeling annotations to GeoJSON`_
+ * `Yolov7 annotations to GeoJSON`_
 
 Getting Help / Reporting Issues:
 --------------------------------
@@ -37,10 +38,12 @@ API
 
 .. _OpenDroneMap:
     https://www.opendronemap.org
-.. _Create Task:
-   https://github.com/OpenDroneMap/CameraLib/blob/main/examples/hello_world.py
-.. _Get Node Info:
-   https://github.com/OpenDroneMap/CameraLib/blob/main/examples/get_node_info.py
+.. _Hello World:
+   https://github.com/OpenDroneMap/CameraLib/blob/main/examples/helloworld.py
+.. _X-AnyLabeling annotations to GeoJSON:
+   https://github.com/OpenDroneMap/CameraLib/blob/main/examples/anylabeling.py
+.. _Yolov7 annotations to GeoJSON:
+   https://github.com/OpenDroneMap/CameraLib/blob/main/examples/yolov7.py
 .. _report it:
     https://github.com/OpenDroneMap/CameraLib/issues
 .. _`GitHub`:

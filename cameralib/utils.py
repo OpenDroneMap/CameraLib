@@ -3,11 +3,11 @@ import os
 import glob
 from pathlib import Path
 
-def read_xanylabeling_annotations(annotation):
+def read_xanylabeling_annotations(labels_dir):
     """Read an annotation file generated with X-AnyLabeling (https://github.com/CVHub520/X-AnyLabeling)
     
     Args:
-        annotation (str): Path to annotation JSON file
+        labels_dir (str): Path to a directory containing X-AnyLabeling labels
     
     Returns:
         list of dict: a list containing dictionaries with the following information
@@ -23,17 +23,23 @@ def read_xanylabeling_annotations(annotation):
             }
         ]
     """
-    with open(annotation, 'r') as f:
-        j = json.load(f)
+    files = glob.glob(os.path.join(labels_dir, "*.json")) + glob.glob(os.path.join(labels_dir, "*.JSON"))
+    annotations = []
+
+    for fi in files:
+        with open(fi, 'r') as f:
+            j = json.load(f)
     
-    return [{
-            'image': os.path.basename(j['imagePath']),
-            'coordinates': s['points'],
-            'properties': {
-                'label': s.get('label')
-            },
-            'normalized': False,
-        }for s in j['shapes']]
+        annotations += [{
+                'image': os.path.basename(j['imagePath']),
+                'coordinates': s['points'],
+                'properties': {
+                    'label': s.get('label')
+                },
+                'normalized': False,
+            }for s in j['shapes']]
+    
+    return annotations
 
 
 def read_yolov7_annotations(labels_dir, image_suffix='.JPG'):
@@ -52,7 +58,7 @@ def read_yolov7_annotations(labels_dir, image_suffix='.JPG'):
                 'coordinates': list     # Coordinates of annotation
 
                 'properties': dict      # Label of the annotation
-                
+
                 'normalized': bool      # True
             }
         ]
