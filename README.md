@@ -21,6 +21,14 @@ Check the [documentation](https://cameralib.readthedocs.io/) and [examples](http
 
 Along with functions for doing coordinates projection, in the `cameralib.utils` package we also offer utilities to read certain annotations file formats. A use case for this is to use a software such as [X-AnyLabeling](https://github.com/CVHub520/X-AnyLabeling/releases) to annotate an image and then use this library to project the polygon/bounding boxes to geographic coordinates.
 
+## Required Files in ODM project
+
+CameraLib requires the following files from an ODM project. It's important that you process a dataset with the `--dsm` or `--dtm` option.
+
+ * `odm_dem/dsm.tif` or `odm_dem/dtm.tif`
+ * `odm_report/shots.geojson`
+ * `cameras.json`
+
 ## Running the Examples
 
 After [installing](#install) `cameralib` you can download any of the [examples](https://github.com/OpenDroneMap/CameraLib/tree/main/examples) into a folder of your choice and run:

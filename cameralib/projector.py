@@ -37,6 +37,9 @@ class Projector:
         else:
             raise InvalidArgError(f"Invalid z_sample_target {z_sample_target}")
 
+        if not os.path.isfile(self.dem_path):
+            raise InvalidArgError(f"{self.dem_path} does not exist. A surface model is required.")
+
         self.shots_path = os.path.abspath(os.path.join(project_path, "odm_report", "shots.geojson"))
         self.cameras_path = os.path.abspath(os.path.join(project_path, "cameras.json"))
 
