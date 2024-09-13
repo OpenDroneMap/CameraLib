@@ -1,5 +1,5 @@
 """
-CameraLib is a library for performing forward and backward projection of 2D coordinates in camera space to geographic coordinates on ODM projects. It's an official `OpenDroneMap`_ project.
+CameraLib is a library for performing forward and backward projection of 2D coordinates in camera space to geographic coordinates on ODM datasets. It's an official `OpenDroneMap`_ project.
 
 Installation:
 -------------

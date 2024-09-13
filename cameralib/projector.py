@@ -7,7 +7,7 @@ from cameralib.camera import load_shots, load_cameras, map_pixels
 from cameralib.exceptions import *
 
 class Projector:
-    """A projector to perform camera coordinates operations on ODM projects
+    """A projector to perform camera coordinates operations on ODM datasets
     
     Args:
         project_path (str): Path to ODM project

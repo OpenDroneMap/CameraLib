@@ -1,6 +1,6 @@
 # CameraLib
 
-A Python library to perform forward and backward projection of 2D coordinates in camera space to geographic coordinates on [ODM](https://github.com/OpenDroneMap/ODM) projects. In simple terms, with an ODM project at hand you can use this library to ask:
+A Python library to perform forward and backward projection of 2D coordinates in camera space to geographic coordinates on [ODM](https://github.com/OpenDroneMap/ODM) datasets. In simple terms, with an ODM dataset at hand you can use this library to ask:
 
  * Given a pixel coordinate in an image, where does it correspond on the map?
  * And it's inverse: given a location on the map, which images and pixels correspond to it?
