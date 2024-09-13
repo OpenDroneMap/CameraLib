@@ -17,7 +17,7 @@ Note we developed the library using Python 3.12. If you're having issues with ot
 
 ## Usage
 
-Check the [documentation](https://cameralib.readthedocs.io/) and our [examples](https://github.com/OpenDroneMap/CameraLib/tree/main/examples).
+Check the [documentation](https://cameralib.readthedocs.io/) and [examples](https://github.com/OpenDroneMap/CameraLib/tree/main/examples).
 
 Along with functions for doing coordinates projection, in the `cameralib.utils` package we also offer utilities to read certain annotations file formats. A use case for this is to use a software such as [X-AnyLabeling](https://github.com/CVHub520/X-AnyLabeling/releases) to annotate an image and then use this library to project the polygon/bounding boxes to geographic coordinates.
 
