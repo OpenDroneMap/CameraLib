@@ -23,6 +23,7 @@ Examples:
  * `Hello World`_
  * `X-AnyLabeling annotations to GeoJSON`_
  * `Yolov7 annotations to GeoJSON`_
+ * `Round Trip`_
 
 Getting Help / Reporting Issues:
 --------------------------------
@@ -44,6 +45,8 @@ API
    https://github.com/OpenDroneMap/CameraLib/blob/main/examples/anylabeling.py
 .. _Yolov7 annotations to GeoJSON:
    https://github.com/OpenDroneMap/CameraLib/blob/main/examples/yolov7.py
+.. _Round Trip:
+   https://github.com/OpenDroneMap/CameraLib/blob/main/examples/roundtrip.py
 .. _report it:
     https://github.com/OpenDroneMap/CameraLib/issues
 .. _`GitHub`:
