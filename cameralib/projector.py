@@ -2,9 +2,14 @@ import os
 import json
 import numpy as np
 import rasterio
+import logging
 from cameralib.geo import get_utm_xyz, get_latlon, raster_sample_z
 from cameralib.camera import load_shots, load_cameras, map_pixels
 from cameralib.exceptions import *
+
+
+logger = logging.getLogger(__name__)
+
 
 class Projector:
     """A projector to perform camera coordinates operations on ODM datasets
@@ -39,6 +44,8 @@ class Projector:
 
         if not os.path.isfile(self.dem_path):
             raise InvalidArgError(f"{self.dem_path} does not exist. A surface model is required.")
+        with rasterio.open(self.dem_path, "r") as r:
+            self.dem_nodata = r.nodata
 
         self.shots_path = os.path.abspath(os.path.join(project_path, "odm_report", "shots.geojson"))
         self.cameras_path = os.path.abspath(os.path.join(project_path, "cameras.json"))
@@ -99,7 +106,7 @@ class Projector:
             ray_world = ray_world.reshape((3, 1))
 
             if float(ray_world[2]) > 0:
-                print(f"Warning: Ray from {image} pointing up, cannot raycast")
+                logger.warning(f"Ray from {image} pointing up, cannot raycast")
                 continue
         
             step = 0 # meters
@@ -206,6 +213,9 @@ class Projector:
         Xa, Ya, Za = get_utm_xyz(self.dem_path, longitude, latitude, 
                                     z_sample_window=self.z_sample_window,
                                     z_sample_strategy=self.z_sample_strategy)
+        if Za == self.dem_nodata:
+            return []
+        
         images = []
         for s in self.shots:
             r = s['rotation']

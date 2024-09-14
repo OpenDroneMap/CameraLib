@@ -1,7 +1,12 @@
 import json
 import os
 import glob
+import logging
 from pathlib import Path
+
+
+logger = logging.getLogger(__name__)
+
 
 def read_xanylabeling_annotations(labels_dir):
     """Read an annotation file generated with X-AnyLabeling (https://github.com/CVHub520/X-AnyLabeling)
@@ -88,9 +93,9 @@ def read_yolov7_annotations(labels_dir, image_suffix='.JPG'):
                             }
                         })
                     except ValueError as e:
-                        print(f"Warning: cannot parse values in {line} ({fi})")
+                        logger.warning(f"Cannot parse values in {line} ({fi})")
                 else:
-                    print(f"Warning: cannot parse line {line} ({fi})")
+                    logger.warning(f"Cannot parse line {line} ({fi})")
         
     return [{
             'image': a['image'],

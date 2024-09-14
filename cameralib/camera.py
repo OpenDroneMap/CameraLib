@@ -2,8 +2,12 @@ import json
 import cv2
 import math
 import sys
+import logging
 import numpy as np
 from cameralib.exceptions import *
+
+
+logger = logging.getLogger(__name__)
 
 def map_pixels(from_camera, to_camera, pixels):
     return to_camera.project_many(from_camera.pixel_bearing_many(pixels))
@@ -154,7 +158,7 @@ def load_cameras(cameras_file):
                                 camera.get('c_x', 0), camera.get('c_y', 0),
                                 camera['k1'], camera['k2'], camera['p1'], camera['p2'], camera['k3'])
         else:
-            print(f"Warning: {camera['projection_type']} camera type is not supported")
+            logger.warning(f"{camera['projection_type']} camera type is not supported")
             continue
 
         result[cam_id] = cam

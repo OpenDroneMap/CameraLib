@@ -11,12 +11,10 @@ def _get_sample_z(data, nodata, strategy):
 
     if window == 1:
         z = float(data[0,0])
-        if z == nodata:
-            raise OutOfBoundsError("Tried to sample nodata value")
     else:
         valid_locs = data != nodata
         if np.count_nonzero(valid_locs) == 0:
-            raise OutOfBoundsError("Tried to sample nodata value")
+            return nodata
 
         locs = (circle_kernel(window) == 1) & valid_locs
         if strategy == 'minimum':
@@ -35,6 +33,9 @@ def _get_sample_z(data, nodata, strategy):
 def raster_sample_z(rast_data, nodata, row, col, window=1, strategy='median'):
     half_win = window / 2.0
     h, w = rast_data.shape
+    if row < 0 or col < 0 or row >= h or col >= w:
+        return nodata
+    
     try:
         data = rast_data[max(0, row-math.floor(half_win)):min(h, row+math.ceil(half_win)),
                          max(0, col-math.floor(half_win)):min(w, col+math.ceil(half_win))]
