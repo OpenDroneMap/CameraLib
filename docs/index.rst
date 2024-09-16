@@ -1,5 +1,5 @@
 Welcome to CameraLib's documentation!
-=================================
+=====================================
 
 .. automodule:: cameralib
     :members: Projector
