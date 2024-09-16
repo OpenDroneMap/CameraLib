@@ -1,6 +1,7 @@
 import os
 import json
 import numpy as np
+from scipy import ndimage
 import rasterio
 import logging
 from cameralib.geo import get_utm_xyz, get_latlon, raster_sample_z
@@ -19,15 +20,17 @@ class Projector:
         z_sample_window (int): Size of the window to use when sampling elevation values
         z_sample_strategy (str): Strategy to use when sampling elevation values. Can be one of: ['minimum', 'maximum', 'average', 'median']
         z_sample_target (str): Elevation raster to use for sampling elevation. One of: ['dsm', 'dtm']
+        z_fill_nodata: Whether to fill nodata cells with nearest neighbor cell values. This gives a wider coverage for queries, but increases the initialization time.
         raycast_resolution_multiplier (float): Value that affects the ray sampling resolution. Lower values can lead to slightly more precise results, but increase processing time.
     """
-    def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm', raycast_resolution_multiplier=0.7071):
+    def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm', z_fill_nodata=True, raycast_resolution_multiplier=0.7071):
         if not os.path.isdir(project_path):
             raise IOError(f"{project_path} is not a valid path to an ODM project")
         
         self.project_path = project_path
         self.z_sample_window = z_sample_window
         self.z_sample_strategy = z_sample_strategy
+        self.z_fill_nodata = z_fill_nodata
         self.raycast_resolution_multiplier = raycast_resolution_multiplier
 
         if self.z_sample_window % 2 == 0 or self.z_sample_window <= 0:
@@ -61,7 +64,13 @@ class Projector:
         if self.raster is None:
             self.raster = rasterio.open(self.dem_path, 'r')
             self.dem_data = self.raster.read(1)
-            self.min_z = self.dem_data[self.dem_data!=self.raster.nodata].min()
+            valid_mask = self.dem_data!=self.raster.nodata
+            self.min_z = self.dem_data[valid_mask].min()
+            if self.z_fill_nodata:
+                indices = ndimage.distance_transform_edt(~valid_mask, 
+                                                    return_distances=False, 
+                                                    return_indices=True)
+                self.dem_data = self.dem_data[tuple(indices)]
 
     def __del__(self):
         if self.raster is not None:
@@ -210,7 +219,8 @@ class Projector:
                 }
             ]
         """
-        Xa, Ya, Za = get_utm_xyz(self.dem_path, longitude, latitude, 
+        self._read_dem()
+        Xa, Ya, Za = get_utm_xyz(self.raster, self.dem_data, self.dem_nodata, longitude, latitude, 
                                     z_sample_window=self.z_sample_window,
                                     z_sample_strategy=self.z_sample_strategy)
         if Za == self.dem_nodata:
