@@ -22,8 +22,9 @@ class Projector:
         z_sample_target (str): Elevation raster to use for sampling elevation. One of: ['dsm', 'dtm']
         z_fill_nodata: Whether to fill nodata cells with nearest neighbor cell values. This gives a wider coverage for queries, but increases the initialization time.
         raycast_resolution_multiplier (float): Value that affects the ray sampling resolution. Lower values can lead to slightly more precise results, but increase processing time.
+        dem_path (str): Manually set a path to a valid GeoTIFF DEM for sampling Z values instead of using the default.
     """
-    def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm', z_fill_nodata=True, raycast_resolution_multiplier=0.7071):
+    def __init__(self, project_path, z_sample_window=1, z_sample_strategy='median', z_sample_target='dsm', z_fill_nodata=True, raycast_resolution_multiplier=0.7071, dem_path=None):
         if not os.path.isdir(project_path):
             raise IOError(f"{project_path} is not a valid path to an ODM project")
         
@@ -38,12 +39,16 @@ class Projector:
 
         self.dsm_path = os.path.abspath(os.path.join(project_path, "odm_dem", "dsm.tif"))
         self.dtm_path = os.path.abspath(os.path.join(project_path, "odm_dem", "dtm.tif"))
-        if z_sample_target == 'dsm':
-            self.dem_path = self.dsm_path
-        elif z_sample_target == 'dtm':
-            self.dem_path = self.dtm_path
+
+        if dem_path is not None:
+            self.dem_path = dem_path
         else:
-            raise InvalidArgError(f"Invalid z_sample_target {z_sample_target}")
+            if z_sample_target == 'dsm':
+                self.dem_path = self.dsm_path
+            elif z_sample_target == 'dtm':
+                self.dem_path = self.dtm_path
+            else:
+                raise InvalidArgError(f"Invalid z_sample_target {z_sample_target}")
 
         if not os.path.isfile(self.dem_path):
             raise InvalidArgError(f"{self.dem_path} does not exist. A surface model is required.")
